@@ -100,7 +100,7 @@ def convert_tf_classifier(classifier):
     return model
 
 if __name__ == '__main__':
-    input = cv2.imread('imgs/4.png')
+    input = cv2.imread('imgs/5.png')
     input = cv2.cvtColor(input, cv2.COLOR_BGR2RGB)[None, ...]/255
 
     classifier = tf.keras.models.load_model('./mobilenet.savedmodel')
@@ -110,20 +110,11 @@ if __name__ == '__main__':
     #load model pretrained model weights
     model = convert_tf_classifier(classifier)
 
-    summary(model, (3, 256, 256))
-
-    #check weights of first layer
-    # print('Weights of first layer:')
-    # print(model.model[0][0].weight)
-
     # torch needs input in form [B, C, H, W] but input is [B, H, W, C]
     input = torch.tensor(input.transpose(0,3,1,2), dtype=torch.float32)
 
     model.eval()
+    print('theirs', classifier.predict(input.numpy().transpose(0,2,3,1)))
     output = model.forward(input)
-
-    # print('theirs', classifier.predict(input.numpy().transpose(0,2,3,1)))
-    # output = output.permute(0,2,3,1)
-    # print(np.round(output.detach().numpy(),4))
-    print(output.shape)
     print('ours', output)
+    summary(model, (3, 256, 256))
