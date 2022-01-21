@@ -105,16 +105,18 @@ if __name__ == '__main__':
 
     classifier = tf.keras.models.load_model('./mobilenet.savedmodel')
 
-    # print('theirs', classifier.predict(input))
+    print('theirs', classifier.predict(input))
 
     #load model pretrained model weights
     model = convert_tf_classifier(classifier)
+
+    # save pytorch model
+    torch.save(model.state_dict(), './classifier.pth')
 
     # torch needs input in form [B, C, H, W] but input is [B, H, W, C]
     input = torch.tensor(input.transpose(0,3,1,2), dtype=torch.float32)
 
     model.eval()
-    print('theirs', classifier.predict(input.numpy().transpose(0,2,3,1)))
     output = model.forward(input)
     print('ours', output)
     summary(model, (3, 256, 256))
