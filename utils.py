@@ -8,6 +8,8 @@ from PIL import ImageFont
 from io import BytesIO
 import IPython.display
 from mobilenet_pytorch import MobileNetV1
+import torch.nn as nn
+import matplotlib
 
 def make_animation(image: np.ndarray,
                    resolution: int,
@@ -323,30 +325,30 @@ def _float_features(values):
   """Returns a float_list from a float / double."""
   return tf.train.Feature(float_list=tf.train.FloatList(value=values))
 
-LAYER_SHAPES = []
-for dense in generator.style_vector_calculator.style_dense_blocks:
-  LAYER_SHAPES.append(dense.dense_bias.weights[0].shape[1])
-
 
 def sindex_to_layer_idx_and_index(generator: tf.keras.models.Model,
                                   sindex: int) -> Tuple[int, int]:
-  global LAYER_SHAPES
+  
+  LAYER_SHAPES = []
+  for dense in generator.style_vector_calculator.style_dense_blocks:
+    LAYER_SHAPES.append(dense.dense_bias.weights[0].shape[1])
+  
   layer_shapes_cumsum = np.concatenate([[0], np.cumsum(LAYER_SHAPES)])
   layer_idx = (layer_shapes_cumsum <= sindex).nonzero()[0][-1]
   return layer_idx, sindex - layer_shapes_cumsum[layer_idx]
 
-
-def get_classifier_results(generator: tf.keras.models.Model, 
+def get_classifier_results(generator: tf.keras.models.Model,
+                           classifier: MobileNetV1,
                            expanded_dlatent: tf.Tensor,
                            use_softmax: bool = False):
   image = call_synthesis(generator, expanded_dlatent)
-  image = tf.transpose(image, (0, 2, 3, 1))
-  results = classifier(image, training=False)
+  # image = tf.transpose(image, (0, 2, 3, 1))
+  # results = classifier(image, training=False)
+  results = classifier(image)
   if use_softmax:
-    return tf.nn.softmax(results).numpy()[0]
+    return nn.Softmax()(results).detach().numpy()[0]
   else:
     return results.numpy()[0]
-
 
 def draw_on_image(image: np.ndarray, number: float,
                   font_file: str,
