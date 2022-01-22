@@ -2,6 +2,7 @@ from typing import Optional, Tuple, List
 import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
@@ -9,7 +10,7 @@ from io import BytesIO
 import IPython.display
 from mobilenet_pytorch import MobileNetV1
 import torch.nn as nn
-import matplotlib
+import torch
 
 def make_animation(image: np.ndarray,
                    resolution: int,
@@ -40,7 +41,6 @@ def show_image(image, fmt='png'):
     image = np.transpose(image, (1, 2, 0))
   bytes_io = BytesIO()
   Image.fromarray(image).save(bytes_io, fmt)
-  Image.fromarray(image).save('irene.png')
 
   IPython.display.display(IPython.display.Image(data=bytes_io.getvalue()))
 
@@ -346,7 +346,7 @@ def get_classifier_results(generator: tf.keras.models.Model,
   # results = classifier(image, training=False)
   results = classifier(image)
   if use_softmax:
-    return nn.Softmax()(results).detach().numpy()[0]
+    return nn.Softmax(dim=1)(results).detach().numpy()[0]
   else:
     return results.numpy()[0]
 
@@ -407,9 +407,14 @@ def generate_change_image_given_dlatent(
   network_inputs[0][layer_idx] += (weight_shift * layer_one_hot)
   images_out = generator.g_synthesis(network_inputs, training=False)
   images_out = tf.maximum(tf.minimum(images_out, 1), -1)
-  change_image = tf.transpose(images_out, [0, 2, 3, 1])
-  result = classifier(change_image, training=False)
-  change_prob = tf.nn.softmax(result).numpy()[0, class_index]
+  # change_image = tf.transpose(images_out, [0, 2, 3, 1])
+  # result = classifier(change_image, training=False)
+  
+  change_image = torch.tensor(images_out.numpy())
+  result = classifier(change_image)
+  change_prob = nn.Softmax(dim=1)(result).detach().numpy()[0, class_index] 
+  change_image = change_image.permute(0, 2, 3, 1)
+
   return change_image, change_prob
 
 
@@ -456,7 +461,9 @@ def get_discriminator_results_given_dlatent(
                                           s_style_min, s_style_max,
                                           style_direction_index, shift_size,
                                           label_size))
-  labels = tf.nn.softmax(classifier(change_image, training=False))
+  
+  results = classifier(change_image)
+  labels = nn.Softmax(dim=1)(results)
   change_image_for_disc = tf.transpose(change_image, (0, 3, 1, 2))
   discriminator_after = discriminator([change_image_for_disc, labels], 
                                       training=False)
@@ -504,9 +511,21 @@ def generate_images_given_dlatent(
   result_image = np.zeros((resolution, 2 * resolution, 3), np.uint8)
   images_out = generator.g_synthesis(network_inputs, training=False)
   images_out = tf.maximum(tf.minimum(images_out, 1), -1)
-  base_image = tf.transpose(images_out, [0, 2, 3, 1])
-  result = classifier(base_image, training=False)
-  base_prob = tf.nn.softmax(result).numpy()[0, class_index]
+
+  # no need to permute for pytorch
+  # base_image = tf.transpose(images_out, [0, 2, 3, 1])
+
+  base_image = torch.tensor(images_out.numpy())
+
+  # Removed flag training=False since we are using a pytorch model 
+  # result = classifier(base_image, training=False)
+  result = classifier(base_image)
+  base_prob = nn.Softmax(1)(result)
+  base_prob = base_prob.detach().numpy()[0, class_index]
+
+  # permute so that draw_on_image() works
+  base_image = base_image.permute(0, 2, 3, 1)
+
   if draw_results_on_image:
     result_image[:, :resolution, :] = draw_on_image(
         base_image[0].numpy(), base_prob, font_file)
