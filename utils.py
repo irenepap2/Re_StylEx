@@ -12,6 +12,15 @@ from mobilenet_pytorch import MobileNetV1
 import torch.nn as nn
 import torch
 
+import pickle
+import click
+import re
+import copy
+import dnnlib
+from torch_utils import misc
+from training import networks
+import collections
+
 def make_animation(image: np.ndarray,
                    resolution: int,
                    figsize: Tuple[int, int] = (20, 8)):
@@ -712,3 +721,67 @@ def visualize_style_by_distance_in_s(
     return np.array([])
   return np.concatenate(result_images[:max_images], axis=0)
 
+#----------------------------------------------------------------------------
+def load_torch_generator(pkl_file_path='./models/generator/generator_kwargs.pkl', pth_file='./models/generator/generator.pth'):
+    print('Loading generator\'s necessary kwargs...')
+    with open(pkl_file_path, 'rb') as f:
+        kwargs = pickle.load(f)
+    print('Creating generator model...')
+    G = networks.Generator(**kwargs).eval().requires_grad_(False)
+    print('Loading generator\'s state dict...')
+    G.load_state_dict(torch.load(pth_file))
+    print('Done')
+    return G
+
+#----------------------------------------------------------------------------
+
+def show_images(images, fmt='png'):
+  for i in range(images.shape[0]):
+    image = np.array(images[i])
+    if image.dtype == np.float32:
+        image = np.uint8(image * 127.5 + 127.5)
+    if image.shape[0] == 3:
+        image = np.transpose(image, (1, 2, 0))
+    bytes_io = BytesIO()
+    Image.fromarray(image).save(bytes_io, fmt)
+    IPython.display.display(IPython.display.Image(data=bytes_io.getvalue()))
+#----------------------------------------------------------------------------
+def generate_sspace_per_index(G,dlat_path='saved_dlantents.pkl', num_layers=14):
+    
+    with open(dlat_path, 'rb') as f:
+        dlatents_file = pickle.load(f)
+    
+    values_per_index = collections.defaultdict(list)
+    for _, dlatent in dlatents_file:
+        # Get the style vector: 
+        dlatent = torch.Tensor(dlatent)
+        expanded_dlatent_tmp = torch.tile(dlatent,[1, num_layers, 1])
+        s_img = torch.cat(G.synthesis.style_vector_calculator(
+            expanded_dlatent_tmp)[1], dim=1).numpy()[0]
+        for i, s_val in enumerate(s_img):
+            values_per_index[i].append(s_val)
+
+    values_per_index = dict(values_per_index)
+    s_indices_num = len(values_per_index.keys())
+    minimums = [min(values_per_index[i]) for i in range(s_indices_num)] 
+    maximums = [max(values_per_index[i]) for i in range(s_indices_num)] 
+
+#----------------------------------------------------------------------------
+def create_images_from_dlatent(G,dlat_path='saved_dlantents.pkl',num_images=1, num_layers=14):
+    
+    with open(dlat_path, 'rb') as f:
+        dlatents_file = pickle.load(f)
+    dlatents = []
+    for dlat in dlatents_file:
+        dlatents.append(dlat[1])
+    dlatents = torch.Tensor(np.array(dlatents))
+    expanded_dlatent_tmp = torch.tile(dlatents,[1, num_layers, 1])
+    
+    if expanded_dlatent_tmp is not None:
+        style_vector_block_grouped, stl_vec_block, stl_vec_torgb = G.synthesis.style_vector_calculator(expanded_dlatent_tmp[:num_images,:,:])
+        gen_output = G.synthesis.image_given_dlatent(expanded_dlatent_tmp[:num_images,:,:] ,style_vector_block_grouped)
+        img_out = torch.maximum(torch.minimum(gen_output, torch.Tensor([1])), torch.Tensor([-1]))
+        show_images(img_out)
+
+    
+#----------------------------------------------------------------------------
