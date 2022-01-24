@@ -745,6 +745,7 @@ def show_images(images, fmt='png'):
     bytes_io = BytesIO()
     Image.fromarray(image).save(bytes_io, fmt)
     IPython.display.display(IPython.display.Image(data=bytes_io.getvalue()))
+
 #----------------------------------------------------------------------------
 def generate_sspace_per_index(G,dlat_path='saved_dlantents.pkl', num_layers=14):
     
@@ -782,6 +783,5 @@ def create_images_from_dlatent(G,dlat_path='saved_dlantents.pkl',num_images=1, n
         gen_output = G.synthesis.image_given_dlatent(expanded_dlatent_tmp[:num_images,:,:] ,style_vector_block_grouped)
         img_out = torch.maximum(torch.minimum(gen_output, torch.Tensor([1])), torch.Tensor([-1]))
         show_images(img_out)
-
     
 #----------------------------------------------------------------------------

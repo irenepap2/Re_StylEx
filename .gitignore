@@ -134,5 +134,4 @@ stylegan2-ada-pytorch-main
 generator.savedmodel
 mobilenet.savedmodel
 imgs
-torch_utils
 
