@@ -1,5 +1,4 @@
 from typing import Optional, Tuple, List
-import tensorflow as tf
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
@@ -61,58 +60,58 @@ def filter_unstable_images(style_change_effect: np.ndarray,
   return style_change_effect
 
 
-@tf.function
-def call_synthesis(generator: networks.Generator,
-                   dlatents_in: tf.Tensor,
-                   conditioning_in: Optional[tf.Tensor] = None,
-                   labels_in: Optional[tf.Tensor] = None,
-                   training: bool = False,
-                   num_layers: int = 14,
-                   dlatent_size: int = 512) -> tf.Tensor:
-  """Calls the synthesis.
+# @tf.function
+# def call_synthesis(generator: networks.Generator,
+#                    dlatents_in: tf.Tensor,
+#                    conditioning_in: Optional[tf.Tensor] = None,
+#                    labels_in: Optional[tf.Tensor] = None,
+#                    training: bool = False,
+#                    num_layers: int = 14,
+#                    dlatent_size: int = 512) -> tf.Tensor:
+#   """Calls the synthesis.
 
-  Args:
-    dlatents_in: the intermediate latent representation of shape [batch size,
-      num_layers, dlatent_size].
-    conditioning_in: Conditioning input to the synthesis network (can be an
-      image or output from an encoder) of shape [minibatch, channels,
-      resolution, resolution]. Set to None if unused.
-    labels_in: of shape [batch_size, label_size]. Set to None if unused.
-    training: Whether this is a training call.
+#   Args:
+#     dlatents_in: the intermediate latent representation of shape [batch size,
+#       num_layers, dlatent_size].
+#     conditioning_in: Conditioning input to the synthesis network (can be an
+#       image or output from an encoder) of shape [minibatch, channels,
+#       resolution, resolution]. Set to None if unused.
+#     labels_in: of shape [batch_size, label_size]. Set to None if unused.
+#     training: Whether this is a training call.
 
-  Returns:
-    The output images and optional latent vector.
+#   Returns:
+#     The output images and optional latent vector.
 
-  """
-  if labels_in is not None:
-    zero_labels = tf.zeros_like(labels_in)
-    dlatents_labels = tf.tile(tf.expand_dims(zero_labels, 1), [1, num_layers, 1])
-    if dlatent_size > 0:
-      dlatents_expanded = tf.concat([dlatents_in, dlatents_labels], axis=2)
-    else:
-      dlatents_expanded = dlatents_labels
-  else:
-    if dlatent_size == 0:
-      raise ValueError('Dlatents are empty and no labels were provided.')
-    dlatents_expanded = dlatents_in
-  # Evaluate synthesis network.
-  style_vector_blocks, style_vector_torgb = generator.style_vector_calculator(
-      dlatents_expanded[:, 0], training=training)
-  if conditioning_in is not None:
-    network_inputs = (style_vector_blocks, style_vector_torgb,
-                      conditioning_in)
-  else:
-    network_inputs = (style_vector_blocks, style_vector_torgb)
-  synthesis_results = generator.g_synthesis(network_inputs, training=training)
+#   """
+#   if labels_in is not None:
+#     zero_labels = tf.zeros_like(labels_in)
+#     dlatents_labels = tf.tile(tf.expand_dims(zero_labels, 1), [1, num_layers, 1])
+#     if dlatent_size > 0:
+#       dlatents_expanded = tf.concat([dlatents_in, dlatents_labels], axis=2)
+#     else:
+#       dlatents_expanded = dlatents_labels
+#   else:
+#     if dlatent_size == 0:
+#       raise ValueError('Dlatents are empty and no labels were provided.')
+#     dlatents_expanded = dlatents_in
+#   # Evaluate synthesis network.
+#   style_vector_blocks, style_vector_torgb = generator.style_vector_calculator(
+#       dlatents_expanded[:, 0], training=training)
+#   if conditioning_in is not None:
+#     network_inputs = (style_vector_blocks, style_vector_torgb,
+#                       conditioning_in)
+#   else:
+#     network_inputs = (style_vector_blocks, style_vector_torgb)
+#   synthesis_results = generator.g_synthesis(network_inputs, training=training)
 
-  # Return requested outputs.
-  return tf.maximum(tf.minimum(synthesis_results, 1), -1)
+#   # Return requested outputs.
+#   return tf.maximum(tf.minimum(synthesis_results, 1), -1)
 
 
 def discriminator_filter(style_change_effect: np.ndarray,
                          all_dlatents: np.ndarray,
                          generator: networks.Generator,
-                         discriminator: tf.keras.models.Model,
+                         discriminator: None, # set to None until we ask Tim
                          classifier: MobileNetV1,
                          sindex: int,
                          style_min: float,
@@ -189,7 +188,7 @@ def find_significant_styles_image_fraction(
     min_changed_images_fraction: float = 0.03,
     label_size: int = 2,
     sindex_offset: int = 0,
-    discriminator: Optional[tf.keras.models.Model] = None,
+    discriminator: Optional[None] = None, #set to None until we ask Tim
     discriminator_threshold: float = 0.2) -> List[Tuple[int, int]]:
   """Returns indices in the style vector which affect the classifier.
 
@@ -253,7 +252,7 @@ def find_significant_styles(
     style_change_effect: np.ndarray,
     num_indices: int,
     class_index: int,
-    discriminator: Optional[tf.keras.models.Model],
+    discriminator: Optional[None], #set to None until we ask Tim
     generator: networks.Generator,
     classifier: MobileNetV1,
     all_dlatents: np.ndarray,
@@ -296,26 +295,26 @@ def find_significant_styles(
     next_s = np.argmax(
         np.mean(
             style_effect_direction[images_effect < max_image_effect], axis=0))
-    if discriminator is not None:
-      sindex = next_s % style_change_effect.shape[2]
-      if sindex == 0:
-        break
-      if not discriminator_filter(
-          style_change_effect=style_change_effect,
-          all_dlatents=all_dlatents,
-          generator=generator,
-          discriminator=discriminator,
-          classifier=classifier,
-          sindex=sindex,
-          style_min=style_min[sindex + sindex_offset],
-          style_max=style_max[sindex + sindex_offset],
-          class_index=class_index,
-          label_size=label_size,
-          change_threshold=discriminator_threshold,
-          sindex_offset=sindex_offset):
-        style_effect_direction[:, next_s] = np.zeros(num_images)
-        discriminator_removed.append(sindex)
-        continue
+    # if discriminator is not None:
+    #   sindex = next_s % style_change_effect.shape[2]
+    #   if sindex == 0:
+    #     break
+    #   if not discriminator_filter(
+    #       style_change_effect=style_change_effect,
+    #       all_dlatents=all_dlatents,
+    #       generator=generator,
+    #       discriminator=discriminator,
+    #       classifier=classifier,
+    #       sindex=sindex,
+    #       style_min=style_min[sindex + sindex_offset],
+    #       style_max=style_max[sindex + sindex_offset],
+    #       class_index=class_index,
+    #       label_size=label_size,
+    #       change_threshold=discriminator_threshold,
+    #       sindex_offset=sindex_offset):
+    #     style_effect_direction[:, next_s] = np.zeros(num_images)
+    #     discriminator_removed.append(sindex)
+    #     continue
 
     all_sindices.append(next_s)
     images_effect += style_effect_direction[:, next_s]
@@ -326,34 +325,36 @@ def find_significant_styles(
           for x in all_sindices]
 
 
-def _float_features(values):
-  """Returns a float_list from a float / double."""
-  return tf.train.Feature(float_list=tf.train.FloatList(value=values))
+# def _float_features(values):
+#   """Returns a float_list from a float / double."""
+#   return tf.train.Feature(float_list=tf.train.FloatList(value=values))
 
 
-def sindex_to_layer_idx_and_index(generator: networks.Generator,
+def sindex_to_layer_idx_and_index(style_vector_block: list,
+                                  
                                   sindex: int) -> Tuple[int, int]:
   
   LAYER_SHAPES = []
-  for dense in generator.style_vector_calculator.style_dense_blocks:
-    LAYER_SHAPES.append(dense.dense_bias.weights[0].shape[1])
+  for item in style_vector_block:
+    LAYER_SHAPES.append(item.shape[1])
   
   layer_shapes_cumsum = np.concatenate([[0], np.cumsum(LAYER_SHAPES)])
   layer_idx = (layer_shapes_cumsum <= sindex).nonzero()[0][-1]
+
   return layer_idx, sindex - layer_shapes_cumsum[layer_idx]
 
-def get_classifier_results(generator: networks.Generator,
-                           classifier: MobileNetV1,
-                           expanded_dlatent: tf.Tensor,
-                           use_softmax: bool = False):
-  image = call_synthesis(generator, expanded_dlatent)
-  # image = tf.transpose(image, (0, 2, 3, 1))
-  # results = classifier(image, training=False)
-  results = classifier(image)
-  if use_softmax:
-    return nn.Softmax(dim=1)(results).detach().numpy()[0]
-  else:
-    return results.numpy()[0]
+# def get_classifier_results(generator: networks.Generator,
+#                            classifier: MobileNetV1,
+#                            expanded_dlatent: tf.Tensor,
+#                            use_softmax: bool = False):
+#   image = call_synthesis(generator, expanded_dlatent)
+#   # image = tf.transpose(image, (0, 2, 3, 1))
+#   # results = classifier(image, training=False)
+#   results = classifier(image)
+#   if use_softmax:
+#     return nn.Softmax(dim=1)(results).detach().numpy()[0]
+#   else:
+#     return results.numpy()[0]
 
 def draw_on_image(image: np.ndarray, number: float,
                   font_file: str,
@@ -377,6 +378,7 @@ def generate_change_image_given_dlatent(
     style_direction_index: int,
     shift_size: float,
     label_size: int = 2,
+    num_layers: int = 14
 ) -> Tuple[np.ndarray, float, float]:
   """Modifies an image given the dlatent on a specific S-index.
 
@@ -397,30 +399,28 @@ def generate_change_image_given_dlatent(
     The image after the style index modification, and the output of
     the classifier on this image.
   """
-  dlatent = torch.from_numpy(dlatent)
+  # dlatent = torch.from_numpy(dlatent)
   expanded_dlatent_tmp = torch.tile(dlatent.unsqueeze(1),[1, num_layers, 1])
-  svbg, _, _ = generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)
-  images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, svbg)
-  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
+  network_inputs = generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)
+  # images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, network_inputs[0])
+  # images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
 
-  network_inputs = generator.style_vector_calculator(dlatent)
+  # network_inputs = generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)
   style_vector = torch.cat(generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)[1], dim=1).numpy()
   orig_value = style_vector[0, sindex]
   target_value = (s_style_min if style_direction_index == 0 else s_style_max)
 
   weight_shift = shift_size * (target_value - orig_value)
 
-  layer_idx, in_idx = sindex_to_layer_idx_and_index(generator, sindex)
-  layer_one_hot = tf.expand_dims(
-      tf.one_hot(in_idx, network_inputs[0][layer_idx].shape[1]), 0)
-  network_inputs[0][layer_idx] += (weight_shift * layer_one_hot)
-
-  images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, svbg)
-  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
+  layer_idx, in_idx = sindex_to_layer_idx_and_index(network_inputs[1], sindex)
   
-  images_out = generator.g_synthesis(network_inputs, training=False)
-  # change_image = tf.transpose(images_out, [0, 2, 3, 1])
-  # result = classifier(change_image, training=False)
+  layer_one_hot = torch.nn.functional.one_hot(torch.Tensor([in_idx]).to(int), network_inputs[1][layer_idx].shape[1])
+  
+  network_inputs[1][layer_idx] += (weight_shift * layer_one_hot)
+  svbg_new = group_new_style_vec_block(network_inputs[1])
+  
+  images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, svbg_new)
+  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1])) 
   
   change_image = torch.tensor(images_out.numpy())
   result = classifier(change_image)
@@ -431,55 +431,55 @@ def generate_change_image_given_dlatent(
 
 
 
-def get_discriminator_results_given_dlatent(
-    dlatent: np.ndarray,
-    generator: networks.Generator,
-    discriminator: tf.keras.models.Model,
-    classifier: MobileNetV1,
-    class_index: int,
-    sindex: int,
-    s_style_min: float,
-    s_style_max: float,
-    style_direction_index: int,
-    shift_size: float = 2,
-    label_size: int = 2,
-) -> Tuple[float, float]:
-  """Modifies an image given the dlatent on a specific S-index.
+# def get_discriminator_results_given_dlatent(
+#     dlatent: np.ndarray,
+#     generator: networks.Generator,
+#     discriminator: None, #set to None until we ask Tim
+#     classifier: MobileNetV1,
+#     class_index: int,
+#     sindex: int,
+#     s_style_min: float,
+#     s_style_max: float,
+#     style_direction_index: int,
+#     shift_size: float = 2,
+#     label_size: int = 2,
+# ) -> Tuple[float, float]:
+#   """Modifies an image given the dlatent on a specific S-index.
 
-  Args:
-    dlatent: The image dlatent, with sape [dlatent_size].
-    generator: The generator model. Either StyleGAN or GLO.
-    class_index: The index of the class to visualize.
-    sindex: The specific style index to visualize.
-    s_style_min: The minimal value of the style index.
-    s_style_max: The maximal value of the style index.
-    style_direction_index: If 0 move s to it's min value otherwise to it's max
-      value.
-    shift_size: Factor of the shift of the style vector.
-    label_size: The size of the label.
+#   Args:
+#     dlatent: The image dlatent, with sape [dlatent_size].
+#     generator: The generator model. Either StyleGAN or GLO.
+#     class_index: The index of the class to visualize.
+#     sindex: The specific style index to visualize.
+#     s_style_min: The minimal value of the style index.
+#     s_style_max: The maximal value of the style index.
+#     style_direction_index: If 0 move s to it's min value otherwise to it's max
+#       value.
+#     shift_size: Factor of the shift of the style vector.
+#     label_size: The size of the label.
 
-  Returns:
-    The discriminator before and after.
-  """
-  network_inputs = generator.style_vector_calculator(dlatent)
-  images_out = generator.g_synthesis(network_inputs, training=False)
-  images_out = tf.maximum(tf.minimum(images_out, 1), -1)
-  labels = tf.constant(dlatent[:, -label_size:], dtype=tf.float32)
-  discriminator_before = discriminator([images_out, labels], training=False)
-  # I am not using the classifier output here, because it is only one.
-  change_image, _ = (
-      generate_change_image_given_dlatent(dlatent, generator, classifier,
-                                          class_index, sindex,
-                                          s_style_min, s_style_max,
-                                          style_direction_index, shift_size,
-                                          label_size))
+#   Returns:
+#     The discriminator before and after.
+#   """
+#   network_inputs = generator.style_vector_calculator(dlatent)
+#   images_out = generator.g_synthesis(network_inputs, training=False)
+#   images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
+#   labels = tf.constant(dlatent[:, -label_size:], dtype=tf.float32)
+#   discriminator_before = discriminator([images_out, labels], training=False)
+#   # I am not using the classifier output here, because it is only one.
+#   change_image, _ = (
+#       generate_change_image_given_dlatent(dlatent, generator, classifier,
+#                                           class_index, sindex,
+#                                           s_style_min, s_style_max,
+#                                           style_direction_index, shift_size,
+#                                           label_size))
   
-  results = classifier(change_image)
-  labels = nn.Softmax(dim=1)(results)
-  change_image_for_disc = tf.transpose(change_image, (0, 3, 1, 2))
-  discriminator_after = discriminator([change_image_for_disc, labels], 
-                                      training=False)
-  return (discriminator_before, discriminator_after)
+#   results = classifier(change_image)
+#   labels = nn.Softmax(dim=1)(results)
+#   change_image_for_disc = tf.transpose(change_image, (0, 3, 1, 2))
+#   discriminator_after = discriminator([change_image_for_disc, labels], 
+#                                       training=False)
+#   return (discriminator_before, discriminator_after)
 
 
 def generate_images_given_dlatent(
@@ -738,6 +738,22 @@ def load_torch_generator(pkl_file_path='./models/generator/generator_kwargs.pkl'
     G.load_state_dict(torch.load(pth_file))
     print('Done')
     return G
+
+#----------------------------------------------------------------------------
+
+def group_new_style_vec_block(svb):
+
+    svbg_new = []
+    group_index = 0
+    temp_list = []
+    for i, stl_vec in enumerate(svb):
+        temp_list.append(stl_vec)
+        if i % 2 == 0:
+            svbg_new.append(temp_list)
+            temp_list = []
+            group_index += 1
+
+    return svbg_new
 
 #----------------------------------------------------------------------------
 
