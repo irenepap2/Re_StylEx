@@ -13,13 +13,9 @@ import torch.nn as nn
 import torch
 
 import pickle
-import click
-import re
-import copy
-import dnnlib
-from torch_utils import misc
-from training import networks
-import collections
+from stylegan2_pytorch.training.torch_utils import misc
+from stylegan2_pytorch.training import networks
+import stylegan2_pytorch.dnnlib as dnnlib
 
 def make_animation(image: np.ndarray,
                    resolution: int,
@@ -66,7 +62,7 @@ def filter_unstable_images(style_change_effect: np.ndarray,
 
 
 @tf.function
-def call_synthesis(generator: tf.keras.models.Model,
+def call_synthesis(generator: networks.Generator,
                    dlatents_in: tf.Tensor,
                    conditioning_in: Optional[tf.Tensor] = None,
                    labels_in: Optional[tf.Tensor] = None,
@@ -115,7 +111,7 @@ def call_synthesis(generator: tf.keras.models.Model,
 
 def discriminator_filter(style_change_effect: np.ndarray,
                          all_dlatents: np.ndarray,
-                         generator: tf.keras.models.Model,
+                         generator: networks.Generator,
                          discriminator: tf.keras.models.Model,
                          classifier: MobileNetV1,
                          sindex: int,
@@ -184,7 +180,7 @@ def find_significant_styles_image_fraction(
     style_change_effect: np.ndarray,
     num_indices: int,
     class_index: int,
-    generator: tf.keras.models.Model,
+    generator: networks.Generator,
     classifier: MobileNetV1,
     all_dlatents: np.ndarray,
     style_min: np.ndarray,
@@ -258,7 +254,7 @@ def find_significant_styles(
     num_indices: int,
     class_index: int,
     discriminator: Optional[tf.keras.models.Model],
-    generator: tf.keras.models.Model,
+    generator: networks.Generator,
     classifier: MobileNetV1,
     all_dlatents: np.ndarray,
     style_min: np.ndarray,
@@ -335,7 +331,7 @@ def _float_features(values):
   return tf.train.Feature(float_list=tf.train.FloatList(value=values))
 
 
-def sindex_to_layer_idx_and_index(generator: tf.keras.models.Model,
+def sindex_to_layer_idx_and_index(generator: networks.Generator,
                                   sindex: int) -> Tuple[int, int]:
   
   LAYER_SHAPES = []
@@ -346,7 +342,7 @@ def sindex_to_layer_idx_and_index(generator: tf.keras.models.Model,
   layer_idx = (layer_shapes_cumsum <= sindex).nonzero()[0][-1]
   return layer_idx, sindex - layer_shapes_cumsum[layer_idx]
 
-def get_classifier_results(generator: tf.keras.models.Model,
+def get_classifier_results(generator: networks.Generator,
                            classifier: MobileNetV1,
                            expanded_dlatent: tf.Tensor,
                            use_softmax: bool = False):
@@ -372,7 +368,7 @@ def draw_on_image(image: np.ndarray, number: float,
 
 def generate_change_image_given_dlatent(
     dlatent: np.ndarray,
-    generator: tf.keras.models.Model,
+    generator: networks.Generator,
     classifier: Optional[MobileNetV1],
     class_index: int,
     sindex: int,
@@ -401,10 +397,14 @@ def generate_change_image_given_dlatent(
     The image after the style index modification, and the output of
     the classifier on this image.
   """
+  dlatent = torch.from_numpy(dlatent)
+  expanded_dlatent_tmp = torch.tile(dlatent.unsqueeze(1),[1, num_layers, 1])
+  svbg, _, _ = generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)
+  images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, svbg)
+  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
+
   network_inputs = generator.style_vector_calculator(dlatent)
-  style_vector = tf.concat(
-        generator.style_vector_calculator(dlatent, training=False)[0],
-        axis=1).numpy()
+  style_vector = torch.cat(generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)[1], dim=1).numpy()
   orig_value = style_vector[0, sindex]
   target_value = (s_style_min if style_direction_index == 0 else s_style_max)
 
@@ -414,8 +414,11 @@ def generate_change_image_given_dlatent(
   layer_one_hot = tf.expand_dims(
       tf.one_hot(in_idx, network_inputs[0][layer_idx].shape[1]), 0)
   network_inputs[0][layer_idx] += (weight_shift * layer_one_hot)
+
+  images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, svbg)
+  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
+  
   images_out = generator.g_synthesis(network_inputs, training=False)
-  images_out = tf.maximum(tf.minimum(images_out, 1), -1)
   # change_image = tf.transpose(images_out, [0, 2, 3, 1])
   # result = classifier(change_image, training=False)
   
@@ -430,7 +433,7 @@ def generate_change_image_given_dlatent(
 
 def get_discriminator_results_given_dlatent(
     dlatent: np.ndarray,
-    generator: tf.keras.models.Model,
+    generator: networks.Generator,
     discriminator: tf.keras.models.Model,
     classifier: MobileNetV1,
     class_index: int,
@@ -481,7 +484,7 @@ def get_discriminator_results_given_dlatent(
 
 def generate_images_given_dlatent(
     dlatent: np.ndarray,
-    generator: tf.keras.models.Model,
+    generator: networks.Generator,
     classifier: Optional[MobileNetV1],
     class_index: int,
     sindex: int,
@@ -493,6 +496,7 @@ def generate_images_given_dlatent(
     label_size: int = 2,
     draw_results_on_image: bool = True,
     resolution: int = 256,
+    num_layers: int = 14,
 ) -> Tuple[np.ndarray, float, float, float, float]:
   """Modifies an image given the dlatent on a specific S-index.
 
@@ -516,24 +520,26 @@ def generate_images_given_dlatent(
     the classifier before and after the
     modification.
   """
-  network_inputs = generator.style_vector_calculator(dlatent)
+  dlatent = torch.from_numpy(dlatent)
+  expanded_dlatent_tmp = torch.tile(dlatent.unsqueeze(1),[1, num_layers, 1])
+  svbg, _, _ = generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)
   result_image = np.zeros((resolution, 2 * resolution, 3), np.uint8)
-  images_out = generator.g_synthesis(network_inputs, training=False)
-  images_out = tf.maximum(tf.minimum(images_out, 1), -1)
+  images_out = generator.synthesis.image_given_dlatent(expanded_dlatent_tmp, svbg)
+  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
 
   # no need to permute for pytorch
   # base_image = tf.transpose(images_out, [0, 2, 3, 1])
 
-  base_image = torch.tensor(images_out.numpy())
+  # base_image = torch.tensor(images_out.numpy())
 
   # Removed flag training=False since we are using a pytorch model 
   # result = classifier(base_image, training=False)
-  result = classifier(base_image)
+  result = classifier(images_out)
   base_prob = nn.Softmax(1)(result)
   base_prob = base_prob.detach().numpy()[0, class_index]
 
   # permute so that draw_on_image() works
-  base_image = base_image.permute(0, 2, 3, 1)
+  base_image = images_out.permute(0, 2, 3, 1)
 
   if draw_results_on_image:
     result_image[:, :resolution, :] = draw_on_image(
@@ -560,7 +566,7 @@ def generate_images_given_dlatent(
 
 
 
-def visualize_style(generator: tf.keras.models.Model,
+def visualize_style(generator: networks.Generator,
                     classifier: MobileNetV1,
                     all_dlatents: np.ndarray,
                     style_change_effect: np.ndarray,
@@ -650,7 +656,7 @@ def visualize_style(generator: tf.keras.models.Model,
 
 
 def visualize_style_by_distance_in_s(
-    generator: tf.keras.models.Model,
+    generator: networks.Generator,
     classifier: MobileNetV1,
     all_dlatents: np.ndarray,
     all_style_vectors_distances: np.ndarray,
@@ -747,27 +753,6 @@ def show_images(images, fmt='png'):
     IPython.display.display(IPython.display.Image(data=bytes_io.getvalue()))
 
 #----------------------------------------------------------------------------
-def generate_sspace_per_index(G,dlat_path='saved_dlantents.pkl', num_layers=14):
-    
-    with open(dlat_path, 'rb') as f:
-        dlatents_file = pickle.load(f)
-    
-    values_per_index = collections.defaultdict(list)
-    for _, dlatent in dlatents_file:
-        # Get the style vector: 
-        dlatent = torch.Tensor(dlatent)
-        expanded_dlatent_tmp = torch.tile(dlatent,[1, num_layers, 1])
-        s_img = torch.cat(G.synthesis.style_vector_calculator(
-            expanded_dlatent_tmp)[1], dim=1).numpy()[0]
-        for i, s_val in enumerate(s_img):
-            values_per_index[i].append(s_val)
-
-    values_per_index = dict(values_per_index)
-    s_indices_num = len(values_per_index.keys())
-    minimums = [min(values_per_index[i]) for i in range(s_indices_num)] 
-    maximums = [max(values_per_index[i]) for i in range(s_indices_num)] 
-
-#----------------------------------------------------------------------------
 def create_images_from_dlatent(G,dlat_path='saved_dlantents.pkl',num_images=1, num_layers=14):
     
     with open(dlat_path, 'rb') as f:
@@ -779,7 +764,7 @@ def create_images_from_dlatent(G,dlat_path='saved_dlantents.pkl',num_images=1, n
     expanded_dlatent_tmp = torch.tile(dlatents,[1, num_layers, 1])
     
     if expanded_dlatent_tmp is not None:
-        style_vector_block_grouped, stl_vec_block, stl_vec_torgb = G.synthesis.style_vector_calculator(expanded_dlatent_tmp[:num_images,:,:])
+        style_vector_block_grouped, _, _ = G.synthesis.style_vector_calculator(expanded_dlatent_tmp[:num_images,:,:])
         gen_output = G.synthesis.image_given_dlatent(expanded_dlatent_tmp[:num_images,:,:] ,style_vector_block_grouped)
         img_out = torch.maximum(torch.minimum(gen_output, torch.Tensor([1])), torch.Tensor([-1]))
         show_images(img_out)

@@ -1,4 +1,4 @@
-﻿# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -8,12 +8,12 @@
 
 import numpy as np
 import torch
-from torch_utils import misc
-from torch_utils import persistence
-from torch_utils.ops import conv2d_resample
-from torch_utils.ops import upfirdn2d
-from torch_utils.ops import bias_act
-from torch_utils.ops import fma
+from stylegan2_pytorch.training.torch_utils import misc
+from stylegan2_pytorch.training.torch_utils import persistence
+from stylegan2_pytorch.training.torch_utils.ops import conv2d_resample
+from stylegan2_pytorch.training.torch_utils.ops import upfirdn2d
+from stylegan2_pytorch.training.torch_utils.ops import bias_act
+from stylegan2_pytorch.training.torch_utils.ops import fma
 
 #----------------------------------------------------------------------------
 
@@ -572,7 +572,6 @@ class SynthesisNetwork(torch.nn.Module):
 #----------------------------------------------------------------------------
     def image_given_dlatent(self, ws, style_vec, **block_kwargs):
         block_ws = []
-        block_styles = []
         with torch.autograd.profiler.record_function('split_ws'):
             misc.assert_shape(ws, [None, self.num_ws, self.w_dim])
             ws = ws.to(torch.float32)

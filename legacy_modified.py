@@ -9,12 +9,11 @@
 import click
 import pickle
 import re
-import copy
 import numpy as np
 import torch
-import dnnlib
-from torch_utils import misc
-from training import networks
+import stylegan2_pytorch.dnnlib as dnnlib
+from stylegan2_pytorch.training.torch_utils import misc
+from stylegan2_pytorch.training import networks
 
 import collections
 
@@ -39,7 +38,7 @@ def load_torch_generator(pkl_file_path='generator_kwargs.pkl', pth_file='generat
     return G
 
 #----------------------------------------------------------------------------
-def convert_tf_component_to_torch(name='G',component=None):
+def convert_tf_component_to_torch(name='G', component=None):
     
     comp = None
     if name == 'G':
@@ -170,7 +169,7 @@ def convert_tf_generator(tf_G):
     # Convert kwargs.
     kwargs = dnnlib.EasyDict(
         z_dim                   = kwarg('latent_size',          512), 
-        c_dim                   = kwarg('label_size',           0), #from 0 to 2
+        c_dim                   = kwarg('label_size',           0),   #from 0 to 2
         w_dim                   = kwarg('dlatent_size',         512), #from 512 to 514
         img_resolution          = kwarg('resolution',           256), #from 1024 to 256
         img_channels            = kwarg('num_channels',         3),
@@ -351,7 +350,6 @@ def convert_tf_discriminator(tf_D):
     #for name, value in tf_params.items(): print(f'{name:<50s}{list(value.shape)}')
 
     # Convert params.
-    from training import networks
     D = networks.Discriminator(**kwargs).eval().requires_grad_(False)
     # pylint: disable=unnecessary-lambda
     _populate_module_params(D,
@@ -397,7 +395,6 @@ def convert_network_pickle(source, dest, force_fp16):
         G = convert_tfpkl_to_pytorch(source,dest)
         
     G = load_torch_generator()
-    create_img_from_dlatent(G)
 
 #----------------------------------------------------------------------------
 
