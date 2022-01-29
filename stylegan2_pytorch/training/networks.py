@@ -285,7 +285,7 @@ class SynthesisLayer(torch.nn.Module):
             self.noise_strength = torch.nn.Parameter(torch.zeros([]))
         self.bias = torch.nn.Parameter(torch.zeros([out_channels]))
 
-    def forward(self, x, w, noise_mode='random', fused_modconv=True, gain=1):
+    def forward(self, x, w, noise_mode='const', fused_modconv=True, gain=1):
         assert noise_mode in ['random', 'const', 'none']
         in_resolution = self.resolution // self.up
         misc.assert_shape(x, [None, self.weight.shape[1], in_resolution, in_resolution])
@@ -312,7 +312,7 @@ class SynthesisLayer(torch.nn.Module):
         styles = self.affine(w)
         return styles
     
-    def calculate_x_with_input_styles(self, x, w, styles, noise_mode='random', fused_modconv=True, gain=1):
+    def calculate_x_with_input_styles(self, x, w, styles, noise_mode='const', fused_modconv=True, gain=1):
         assert noise_mode in ['random', 'const', 'none']
         in_resolution = self.resolution // self.up
         misc.assert_shape(x, [None, self.weight.shape[1], in_resolution, in_resolution])

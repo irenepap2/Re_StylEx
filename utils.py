@@ -358,11 +358,12 @@ def sindex_to_layer_idx_and_index(style_vector_block: list,
 
 def draw_on_image(image: np.ndarray, number: float,
                   font_file: str,
-                  font_fill: Tuple[int, int, int] = (0, 0, 255)) -> np.ndarray:
+                  font_fill: Tuple[int, int, int] = (0, 0, 0)) -> np.ndarray:
   """Draws a number on the top left corner of the image."""
   fnt = ImageFont.truetype(font_file, 20)
   out_image = Image.fromarray((image * 127.5 + 127.5).astype(np.uint8))
   draw = ImageDraw.Draw(out_image)
+  draw.rectangle(tuple([0, 0, 70, 20]),fill=tuple([255, 255, 255]))
   draw.multiline_text((10, 10), ('%.3f' % number), font=fnt, fill=font_fill)
   return np.array(out_image)
 
@@ -431,55 +432,55 @@ def generate_change_image_given_dlatent(
 
 
 
-# def get_discriminator_results_given_dlatent(
-#     dlatent: np.ndarray,
-#     generator: networks.Generator,
-#     discriminator: None, #set to None until we ask Tim
-#     classifier: MobileNetV1,
-#     class_index: int,
-#     sindex: int,
-#     s_style_min: float,
-#     s_style_max: float,
-#     style_direction_index: int,
-#     shift_size: float = 2,
-#     label_size: int = 2,
-# ) -> Tuple[float, float]:
-#   """Modifies an image given the dlatent on a specific S-index.
+def get_discriminator_results_given_dlatent(
+    dlatent: np.ndarray,
+    generator: networks.Generator,
+    discriminator: None, #set to None until we ask Tim
+    classifier: MobileNetV1,
+    class_index: int,
+    sindex: int,
+    s_style_min: float,
+    s_style_max: float,
+    style_direction_index: int,
+    shift_size: float = 2,
+    label_size: int = 2,
+) -> Tuple[float, float]:
+  """Modifies an image given the dlatent on a specific S-index.
 
-#   Args:
-#     dlatent: The image dlatent, with sape [dlatent_size].
-#     generator: The generator model. Either StyleGAN or GLO.
-#     class_index: The index of the class to visualize.
-#     sindex: The specific style index to visualize.
-#     s_style_min: The minimal value of the style index.
-#     s_style_max: The maximal value of the style index.
-#     style_direction_index: If 0 move s to it's min value otherwise to it's max
-#       value.
-#     shift_size: Factor of the shift of the style vector.
-#     label_size: The size of the label.
+  Args:
+    dlatent: The image dlatent, with sape [dlatent_size].
+    generator: The generator model. Either StyleGAN or GLO.
+    class_index: The index of the class to visualize.
+    sindex: The specific style index to visualize.
+    s_style_min: The minimal value of the style index.
+    s_style_max: The maximal value of the style index.
+    style_direction_index: If 0 move s to it's min value otherwise to it's max
+      value.
+    shift_size: Factor of the shift of the style vector.
+    label_size: The size of the label.
 
-#   Returns:
-#     The discriminator before and after.
-#   """
-#   network_inputs = generator.style_vector_calculator(dlatent)
-#   images_out = generator.g_synthesis(network_inputs, training=False)
-#   images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
-#   labels = tf.constant(dlatent[:, -label_size:], dtype=tf.float32)
-#   discriminator_before = discriminator([images_out, labels], training=False)
-#   # I am not using the classifier output here, because it is only one.
-#   change_image, _ = (
-#       generate_change_image_given_dlatent(dlatent, generator, classifier,
-#                                           class_index, sindex,
-#                                           s_style_min, s_style_max,
-#                                           style_direction_index, shift_size,
-#                                           label_size))
+  Returns:
+    The discriminator before and after.
+  """
+  network_inputs = generator.style_vector_calculator(dlatent)
+  images_out = generator.g_synthesis(network_inputs, training=False)
+  images_out = torch.maximum(torch.minimum(images_out, torch.Tensor([1])), torch.Tensor([-1]))
+  labels = tf.constant(dlatent[:, -label_size:], dtype=tf.float32)
+  discriminator_before = discriminator([images_out, labels], training=False)
+  # I am not using the classifier output here, because it is only one.
+  change_image, _ = (
+      generate_change_image_given_dlatent(dlatent, generator, classifier,
+                                          class_index, sindex,
+                                          s_style_min, s_style_max,
+                                          style_direction_index, shift_size,
+                                          label_size))
   
-#   results = classifier(change_image)
-#   labels = nn.Softmax(dim=1)(results)
-#   change_image_for_disc = tf.transpose(change_image, (0, 3, 1, 2))
-#   discriminator_after = discriminator([change_image_for_disc, labels], 
-#                                       training=False)
-#   return (discriminator_before, discriminator_after)
+  results = classifier(change_image)
+  labels = nn.Softmax(dim=1)(results)
+  change_image_for_disc = tf.transpose(change_image, (0, 3, 1, 2))
+  discriminator_after = discriminator([change_image_for_disc, labels], 
+                                      training=False)
+  return (discriminator_before, discriminator_after)
 
 
 def generate_images_given_dlatent(
@@ -520,7 +521,7 @@ def generate_images_given_dlatent(
     the classifier before and after the
     modification.
   """
-  dlatent = torch.from_numpy(dlatent)
+  # dlatent = torch.from_numpy(dlatent)
   expanded_dlatent_tmp = torch.tile(dlatent.unsqueeze(1),[1, num_layers, 1])
   svbg, _, _ = generator.synthesis.style_vector_calculator(expanded_dlatent_tmp)
   result_image = np.zeros((resolution, 2 * resolution, 3), np.uint8)
@@ -693,12 +694,14 @@ def visualize_style_by_distance_in_s(
   """
 
   # Choose the dlatent indices to visualize
-  images_idx = np.argsort(
-      all_style_vectors_distances[:, sindex, style_sign_index])[::-1]
-  if images_idx.size == 0:
-    return np.array([])
+  # images_idx = np.argsort(
+  #     all_style_vectors_distances[:, sindex, style_sign_index])[::-1]
+  # if images_idx.size == 0:
+  #   return np.array([])
 
-  images_idx = images_idx[:min(max_images*10, len(images_idx))]
+  # images_idx = images_idx[:min(max_images*10, len(images_idx))]
+  # dlatents = all_dlatents[images_idx]
+  images_idx = [47, 50, 93, 98, 123, 165, 210, 214]
   dlatents = all_dlatents[images_idx]
 
   result_images = []
@@ -722,10 +725,11 @@ def visualize_style_by_distance_in_s(
     result_images.append(result_image)
 
 
-  if len(result_images) < 3:
-    # No point in returning results with very little images
-    return np.array([])
+  # if len(result_images) < 3:
+  #   # No point in returning results with very little images
+  #   return np.array([])
   return np.concatenate(result_images[:max_images], axis=0)
+
 
 #----------------------------------------------------------------------------
 def load_torch_generator(pkl_file_path='./models/generator/generator_kwargs.pkl', pth_file='./models/generator/generator.pth'):
