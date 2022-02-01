@@ -411,7 +411,10 @@ def generate_change_image_given_dlatent(
   orig_value = style_vector[0, sindex]
   target_value = (s_style_min if style_direction_index == 0 else s_style_max)
 
-  weight_shift = shift_size * (target_value - orig_value)
+  if target_value == orig_value:
+    weight_shift = shift_size
+  else:
+    weight_shift = shift_size * (target_value - orig_value)
 
   layer_idx, in_idx = sindex_to_layer_idx_and_index(network_inputs[1], sindex)
   
@@ -671,7 +674,8 @@ def visualize_style_by_distance_in_s(
     label_size: int = 2,
     class_index: int = 0,
     draw_results_on_image: bool = True,
-    effect_threshold: float = 0.1) -> np.ndarray:
+    effect_threshold: float = 0.1,
+    images_idx: list = [47, 50, 93, 98, 123, 165, 210, 214]) -> np.ndarray:
   """Returns an image visualizing the effect of a specific S-index.
 
   Args:
@@ -701,7 +705,6 @@ def visualize_style_by_distance_in_s(
 
   # images_idx = images_idx[:min(max_images*10, len(images_idx))]
   # dlatents = all_dlatents[images_idx]
-  images_idx = [47, 50, 93, 98, 123, 165, 210, 214]
   dlatents = all_dlatents[images_idx]
 
   result_images = []
