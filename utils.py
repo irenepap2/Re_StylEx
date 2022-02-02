@@ -347,6 +347,8 @@ def sindex_to_layer_idx_and_index(style_vector_block: list,
 #                            classifier: MobileNetV1,
 #                            expanded_dlatent: tf.Tensor,
 #                            use_softmax: bool = False):
+
+  
 #   image = call_synthesis(generator, expanded_dlatent)
 #   # image = tf.transpose(image, (0, 2, 3, 1))
 #   # results = classifier(image, training=False)
@@ -563,7 +565,7 @@ def generate_images_given_dlatent(
         change_image[0].numpy(), change_prob, font_file)
   else:
     result_image[:, resolution:, :] = (
-        np.maxiumum(np.minimum(change_image[0].numpy(), 1), -1) * 127.5 +
+        np.maximum(np.minimum(change_image[0].numpy(), 1), -1) * 127.5 +
                                                127.5).astype(np.uint8)
 
   return (result_image, change_prob, base_prob)
