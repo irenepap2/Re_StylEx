@@ -768,7 +768,8 @@ def group_new_style_vec_block(svb):
 
 def show_images(images, fmt='png'):
   for i in range(images.shape[0]):
-    image = np.array(images[i])
+    image = images[i].detach().numpy()
+    # image = np.array(images[i])
     if image.dtype == np.float32:
         image = np.uint8(image * 127.5 + 127.5)
     if image.shape[0] == 3:
@@ -795,3 +796,26 @@ def create_images_from_dlatent(G,dlat_path='saved_dlantents.pkl',num_images=1, n
         show_images(img_out)
     
 #----------------------------------------------------------------------------
+
+def load_torch_encoder(pkl_file_path='./models/encoder/encoder_kwargs.pkl', pth_file='./models/encoder/encoder.pth'):
+    
+    print('Loading encoder\'s necessary kwargs...')
+    with open(pkl_file_path, 'rb') as f:
+        kwargs = pickle.load(f)
+    print('Creating encoder model...')
+    E = networks.Encoder(**kwargs).eval().requires_grad_(False)
+    print('Loading encoder\'s state dict...')
+    E.load_state_dict(torch.load(pth_file))
+    print('Done')
+    return E
+
+#----------------------------------------------------------------------------
+
+def create_dlat_from_img_and_logits(E, logits, image):
+    image = torch.from_numpy(image).unsqueeze(0)
+    enc_out = E(image,2)
+    dlatent = torch.cat([enc_out, logits], dim=1)
+    
+    return dlatent
+#----------------------------------------------------------------------------
+  
