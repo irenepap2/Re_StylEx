@@ -36,13 +36,13 @@ To **reproduce the results shown in our paper**, run the following notebook:
 
 <p align="center">
   <b>Top 4 attributes for the perceived age classifier</b><br>
-  <img src="./Imgs/Our_Top4.png" alt="drawing" width="850"/><br><br><br>
+  <img src="./imgs/Our_Top4.png" alt="drawing" width="850"/><br><br><br>
   <b>Independent selection strategy - Top-5 detected attributes</b><br>
-  <img src="./Imgs/Individual.png" alt="drawing" width="850"/><br><br><br>
+  <img src="./imgs/Individual.png" alt="drawing" width="850"/><br><br><br>
   <b>Classification study results</b><br>
-  <img src="./Imgs/Study1.png" alt="drawing" width="400"/><br><br><br>
+  <img src="./imgs/Study1.png" alt="drawing" width="400"/><br><br><br>
   <b>Verbal description study results</b><br>
-  <img src="./Imgs/Study2.png" alt="drawing" width="740"/><br><br><br>
+  <img src="./imgs/Study2.png" alt="drawing" width="740"/><br><br><br>
 </p>
 
 The files ```legacy_modified.py``` and ```mobilenet_pytorch.py``` can be used to transfer the original paper's pre-trained models from TensorFlow to Pytorch. For this, the pre-trained models provided in the authors' notebook ([GitHub](https://github.com/google/explaining-in-style)) are needed.
