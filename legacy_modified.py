@@ -1,10 +1,6 @@
-﻿# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
+﻿# Disclaimer: This file is a modification of the original file of legacy.py from
+#             NVLabs found in this repository: https://github.com/NVlabs/stylegan2-ada-pytorch
+
 import tensorflow
 import click
 import pickle
@@ -25,11 +21,6 @@ from io import BytesIO
 import IPython.display
 
 
-def create_dlat_from_img_and_logits(E, logits, image):
-    image = torch.from_numpy(image).unsqueeze(0)
-    enc_out = E(image,2)
-    dlatent = torch.cat([enc_out, logits], dim=1)
-    return dlatent
 #----------------------------------------------------------------------------
 def load_torch_encoder(pkl_file_path='./models/encoder/encoder_kwargs.pkl', pth_file='./models/encoder/encoder.pth'):
     
@@ -42,6 +33,32 @@ def load_torch_encoder(pkl_file_path='./models/encoder/encoder_kwargs.pkl', pth_
     E.load_state_dict(torch.load(pth_file))
     print('Done')
     return E
+
+#----------------------------------------------------------------------------
+def load_torch_discriminator(pkl_file_path='models/discriminator/discriminator_kwargs.pkl', pth_file='models/discriminator/discriminator.pth'):
+    
+    print('Loading discrimintor\'s necessary kwargs...')
+    with open(pkl_file_path, 'rb') as f:
+        kwargs = pickle.load(f)
+    print('Creating discrimintor model...')
+    D = networks.Discriminator(**kwargs).eval().requires_grad_(False)
+    print('Loading discrimintor\'s state dict...')
+    D.load_state_dict(torch.load(pth_file))
+    print('Done')
+    return D
+
+#----------------------------------------------------------------------------
+
+def load_torch_generator(pkl_file_path='./models/generator/generator_kwargs.pkl', pth_file='./models/generator/generator.pth'):
+    print('Loading generator\'s necessary kwargs...')
+    with open(pkl_file_path, 'rb') as f:
+        kwargs = pickle.load(f)
+    print('Creating generator model...')
+    G = networks.Generator(**kwargs).eval().requires_grad_(False)
+    print('Loading generator\'s state dict...')
+    G.load_state_dict(torch.load(pth_file))
+    print('Done')
+    return G
 
 #----------------------------------------------------------------------------
 
@@ -60,7 +77,6 @@ def convert_discriminator_tfpkl_to_pytorch(source_path='saved_d_dictionary.pkl',
     
     return torch_model
 
-#----------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------
 
@@ -249,81 +265,8 @@ def convert_tf_encoder(tf_E):
 
 
 #----------------------------------------------------------------------------
-def load_torch_generator(pkl_file_path='generator_kwargs.pkl', pth_file='generator.pth'):
-    print('Loading generator\'s necessary kwargs...')
-    with open(pkl_file_path, 'rb') as f:
-        kwargs = pickle.load(f)
-    print('Creating generator model...')
-    G = networks.Generator(**kwargs).eval().requires_grad_(False)
-    print('Loading generator\'s state dict...')
-    G.load_state_dict(torch.load(pth_file))
-    print('Done')
-    return G
 
-#----------------------------------------------------------------------------
-def convert_tf_component_to_torch(name='G', component=None):
-    
-    comp = None
-    if name == 'G':
-        G = convert_tf_generator(component)
-    
-    return G
-
-#----------------------------------------------------------------------------
-
-def show_images(images, fmt='png'):
-  for i in range(images.shape[0]):
-    image = np.array(images[i])
-    if image.dtype == np.float32:
-        image = np.uint8(image * 127.5 + 127.5)
-    if image.shape[0] == 3:
-        image = np.transpose(image, (1, 2, 0))
-    plt.figure()
-    plt.imshow(image)
-    bytes_io = BytesIO()
-    Image.fromarray(image).save(bytes_io, fmt)
-    IPython.display.display(IPython.display.Image(data=bytes_io.getvalue()))
-#----------------------------------------------------------------------------
-def generate_sspace_per_index(G,dlat_path='saved_dlantents.pkl', num_layers=14):
-    
-    with open(dlat_path, 'rb') as f:
-        dlatents_file = pickle.load(f)
-    
-    values_per_index = collections.defaultdict(list)
-    for _, dlatent in dlatents_file:
-        # Get the style vector: 
-        dlatent = torch.Tensor(dlatent)
-        expanded_dlatent_tmp = torch.tile(dlatent,[1, num_layers, 1])
-        s_img = torch.cat(G.synthesis.style_vector_calculator(
-            expanded_dlatent_tmp)[1], dim=1).numpy()[0]
-        for i, s_val in enumerate(s_img):
-            values_per_index[i].append(s_val)
-
-    values_per_index = dict(values_per_index)
-    s_indices_num = len(values_per_index.keys())
-    minimums = [min(values_per_index[i]) for i in range(s_indices_num)] 
-    maximums = [max(values_per_index[i]) for i in range(s_indices_num)] 
-
-#----------------------------------------------------------------------------
-def create_image_from_dlatent(G,dlat_path='saved_dlantents.pkl', num_layers=14):
-    
-    with open(dlat_path, 'rb') as f:
-        dlatents_file = pickle.load(f)
-    dlatents = []
-    for dlat in dlatents_file:
-        dlatents.append(dlat[1])
-    dlatents = torch.Tensor(np.array(dlatents))
-    expanded_dlatent_tmp = torch.tile(dlatents,[1, num_layers, 1])
-    
-    if expanded_dlatent_tmp is not None:
-        style_vector_block_grouped, stl_vec_block, stl_vec_torgb = G.synthesis.style_vector_calculator(expanded_dlatent_tmp[:1,:,:])
-        gen_output = G.synthesis.image_given_dlatent(expanded_dlatent_tmp[:1,:,:] ,style_vector_block_grouped)
-        img_out = torch.maximum(torch.minimum(gen_output, torch.Tensor([1])), torch.Tensor([-1]))
-        show_images(img_out)
-
-    
-#----------------------------------------------------------------------------
-def convert_tfpkl_to_pytorch(source_path='saved_g_dictionary.pkl', dest_path='./generator.pth'):
+def convert_generator_tfpkl_to_pytorch(source_path='saved_g_dictionary.pkl', dest_path='./generator.pth'):
 
     print(f'Loading "{source_path}"...')
     with open(source_path, 'rb') as f:
@@ -338,17 +281,6 @@ def convert_tfpkl_to_pytorch(source_path='saved_g_dictionary.pkl', dest_path='./
 
 
 #----------------------------------------------------------------------------
-
-def _collect_tf_params(tf_net):
-    # pylint: disable=protected-access
-    tf_params = dict()
-    def recurse(prefix, tf_net):
-        for name, value in tf_net.variables:
-            tf_params[prefix + name] = value
-        for name, comp in tf_net.components.items():
-            recurse(prefix + name + '/', comp)
-    recurse('', tf_net)
-    return tf_params
 
 def _collect_tf_params_mod(tf_net):
     # pylint: disable=protected-access
@@ -484,15 +416,21 @@ def convert_tf_generator(tf_G):
 #----------------------------------------------------------------------------
 
 @click.command()
-@click.option('--source', help='Input pickle', default='saved_g_dictionary.pkl', required=True, metavar='PATH')
-@click.option('--dest', help='Output pickle', default='./encoder/encoder.pth', required=True, metavar='PATH')
+@click.option('--source_generator', help='Input pickle', default='saved_g_dictionary.pkl', required=True, metavar='PATH')
+@click.option('--dest_generator', help='Output pickle', default='./models/generator/generator.pth', required=True, metavar='PATH')
+@click.option('--source_encoder', help='Input pickle', default='saved_e_dictionary.pkl', required=True, metavar='PATH')
+@click.option('--dest_encoder', help='Output pickle', default='./models/encoder/encoder.pth', required=True, metavar='PATH')
+@click.option('--source_discriminator', help='Input pickle', default='saved_d_dictionary.pkl', required=True, metavar='PATH')
+@click.option('--dest_discriminator', help='Output pickle', default='./models/discriminator/discriminator.pth', required=True, metavar='PATH')
 @click.option('--force-fp16', help='Force the networks to use FP16', type=bool, default=False, metavar='BOOL', show_default=True)
-def convert_network_pickle(source, dest, force_fp16):
+def convert_network_pickle(source_generator, dest_generator,
+                           source_encoder, dest_encoder,
+                           source_discriminator, dest_discriminator,
+                           force_fp16):
     """Convert legacy network pickle into the native PyTorch format.
 
-    The tool is able to load the main network configurations exported using the TensorFlow version of StyleGAN2 or StyleGAN2-ADA.
-    It does not support e.g. StyleGAN2-ADA comparison methods, StyleGAN2 configs A-D, or StyleGAN1 networks.
-
+    The tool is able to load the main network configurations exported using the TensorFlow version of StyleEx.
+    
     Example:
 
     \b
@@ -500,23 +438,21 @@ def convert_network_pickle(source, dest, force_fp16):
         --source=https://nvlabs-fi-cdn.nvidia.com/stylegan2/networks/stylegan2-cat-config-f.pkl \\
         --dest=stylegan2-cat-config-f.pkl
     """
-    # if not path.exists(dest):
-    #     G = convert_tfpkl_to_pytorch(source,dest)
+    if not path.exists(dest_generator):
+        generator = convert_generator_tfpkl_to_pytorch(source_generator, dest_generator)
+    else:
+        generator = load_torch_generator()
         
-    # G = load_torch_generator()
-    # create_images_from_dlatent(G)
-    D = convert_discriminator_tfpkl_to_pytorch()
-    # D = load_torch_discrimin()
-    # G = load_torch_generator()
-    # CLASSIFIER_PATH = './models/classifier.pth'
-    # classifier = MobileNetV1()
-    # classifier.load_state_dict(torch.load(CLASSIFIER_PATH))
-    # classifier.eval()
-    # classifier.requires_grad_(False)
-    # image = plt.imread('69931_256.png').transpose(2,0,1)
-    # logits = classifier(torch.from_numpy(image).unsqueeze(0))
-    # dlat = create_dlat_from_img(E, logits, image)
-    # create_images_from_my_dlatent(G,dlatent=dlat)
+    if not path.exists(dest_encoder):
+        encoder = convert_encoder_tfpkl_to_pytorch(source_encoder, dest_encoder)
+    else:
+        encoder = load_torch_encoder()
+    
+    if not path.exists(dest_discriminator):
+        discriminator = convert_discriminator_tfpkl_to_pytorch(source_discriminator, dest_discriminator)
+    else:
+        discriminator = load_torch_discriminator()
+
 
 #----------------------------------------------------------------------------
 
