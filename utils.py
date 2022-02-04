@@ -811,6 +811,18 @@ def load_torch_encoder(pkl_file_path='./models/encoder/encoder_kwargs.pkl', pth_
     return E
 
 #----------------------------------------------------------------------------
+def load_torch_discriminator(pkl_file_path='models/discriminator/discriminator_kwargs.pkl', pth_file='models/discriminator/discriminator.pth'):
+    
+    print('Loading discrimintor\'s necessary kwargs...')
+    with open(pkl_file_path, 'rb') as f:
+        kwargs = pickle.load(f)
+    print('Creating discrimintor model...')
+    D = networks.Discriminator(**kwargs).eval().requires_grad_(False)
+    print('Loading discrimintor\'s state dict...')
+    D.load_state_dict(torch.load(pth_file))
+    print('Done')
+    return D
+#----------------------------------------------------------------------------
 
 def create_dlat_from_img_and_logits(E, logits, image):
     image = torch.from_numpy(image).unsqueeze(0)
