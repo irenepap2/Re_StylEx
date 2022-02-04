@@ -1,40 +1,43 @@
 # Reproducibility study for "Explaining in Style: Training a GAN to explain a classifier in StyleSpace"
 
-This repository contains our experiments in reproducing Lang et.al's ["Explaining in Style: Training a GAN to explain a classifier in StyleSpace"](https://arxiv.org/abs/2104.13369).
+This repository contains our experiments in reproducing Lang et.al's  ["Explaining in Style: Training a GAN to explain a classifier in StyleSpace"](https://arxiv.org/abs/2104.13369).
+
 
 ## Requirements
 
-To install requirements you need to activate the following environment in anaconda:
+If case you want to run our code locally, you need to activate the following environment in anaconda.
+
+We strongly recommend running both our notebooks in Colab, since this is the environment we used.
 
 ```setup
 conda env create -f environment.yml
 ```
 
+
 ## Training
 
-To train our implementation of the StylEx model in the paper, run the following notebook in Colab:
+To train our implementation of the StylEx model in the PyTorch, run the following notebook:
 
-```train
-python train.py --input-data <path_to_data> --alpha 10 --beta 20
-```
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oG-GY-Cl3FhULQwfC_Sb6jwIMOpfBJgO?usp=sharing)
+
 
 ## Pre-trained Models
 
-You can download pretrained models here:
+To save time we provide our pre-trained models and ```.py``` files needed in a ```.zip``` file in Google Drive and load them in the following Colab notebook to reproduce our results.
 
-- [My awesome model](https://drive.google.com/mymodel.pth) trained on ImageNet using parameters x,y,z. 
-
->📋  Give a link to where/how the pretrained models can be downloaded and how they were trained (if applicable).  Alternatively you can have an additional column in your results table with a link to the models.
 
 ## Results
 
-To reproduce the results shown in our paper, run the following notebook in Colab:
+To **reproduce the results shown in our paper**, run the following notebook:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/googlecolab/colabtools/blob/master/notebooks/colab-github-demo.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oG-GY-Cl3FhULQwfC_Sb6jwIMOpfBJgO?usp=sharing)
 
-
->📋  Include a table of results from your paper, and link back to the leaderboard for clarity and context. If your main result is a figure, include that figure and link to the command or notebook to reproduce it. 
 
 
 ## Contributing
+
+All contributions are welcome. All content in this repository is licensed under the MIT license.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
