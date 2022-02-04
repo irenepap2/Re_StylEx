@@ -34,6 +34,16 @@ To **reproduce the results shown in our paper**, run the following notebook:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oG-GY-Cl3FhULQwfC_Sb6jwIMOpfBJgO?usp=sharing)
 
+<p align="center">
+  <b>Top 4 attributes for the perceived age classifier</b><br>
+  <img src="./Imgs/Our_Top4.png" alt="drawing" width="850"/><br><br><br>
+  <b>Independent selection strategy - Top-5 detected attributes</b><br>
+  <img src="./Imgs/Individual.png" alt="drawing" width="850"/><br><br><br>
+  <b>Classification study results</b><br>
+  <img src="./Imgs/Study1.png" alt="drawing" width="400"/><br><br><br>
+  <b>Verbal description study results</b><br>
+  <img src="./Imgs/Study2.png" alt="drawing" width="740"/><br><br><br>
+</p>
 
 
 ## Contributing
