@@ -2,12 +2,14 @@
 
 This repository contains our experiments in reproducing Lang et.al's  ["Explaining in Style: Training a GAN to explain a classifier in StyleSpace"](https://arxiv.org/abs/2104.13369).
 
+Original Paper Material: [Website](https://explaining-in-style.github.io/) [GitHub](https://github.com/google/explaining-in-style)
+
 
 ## Requirements
 
 If case you want to run our code locally, you need to activate the following environment in anaconda.
 
-We strongly recommend running both our notebooks in Colab, since this is the environment we used.
+We **strongly** recommend running both our notebooks in Colab, since this is the environment we used.
 
 ```setup
 conda env create -f environment.yml
