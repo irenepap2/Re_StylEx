@@ -20,7 +20,7 @@ conda env create -f environment.yml
 
 To train our implementation of the StylEx model in the PyTorch, run the following notebook:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oG-GY-Cl3FhULQwfC_Sb6jwIMOpfBJgO?usp=sharing)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/irenepap2/FACT_UvA_2022/blob/main/train/StylEx.ipynb)
 
 
 ## Pre-trained Models
@@ -32,7 +32,7 @@ To save time we provide our pre-trained models and ```.py``` files needed in a `
 
 To **reproduce the results shown in our paper**, run the following notebook:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1oG-GY-Cl3FhULQwfC_Sb6jwIMOpfBJgO?usp=sharing)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/irenepap2/FACT_UvA_2022/blob/main/Attr_Find.ipynb)
 
 <p align="center">
   <b>Top 4 attributes for the perceived age classifier</b><br>
@@ -44,6 +44,8 @@ To **reproduce the results shown in our paper**, run the following notebook:
   <b>Verbal description study results</b><br>
   <img src="./Imgs/Study2.png" alt="drawing" width="740"/><br><br><br>
 </p>
+
+The files ```legacy_modified.py``` and ```mobilenet_pytorch.py``` can be used to transfer the original paper's pre-trained models from TensorFlow to Pytorch. For this, the pre-trained models provided in the authors' notebook ([GitHub](https://github.com/google/explaining-in-style)) are needed.
 
 
 ## Contributing
