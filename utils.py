@@ -764,12 +764,13 @@ def group_new_style_vec_block(svb):
 
     return svbg_new
 
+
 #----------------------------------------------------------------------------
+
 
 def show_images(images, fmt='png'):
   for i in range(images.shape[0]):
     image = images[i].detach().numpy()
-    # image = np.array(images[i])
     if image.dtype == np.float32:
         image = np.uint8(image * 127.5 + 127.5)
     if image.shape[0] == 3:
