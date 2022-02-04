@@ -18,7 +18,7 @@ conda env create -f environment.yml
 
 ## Training
 
-To train our implementation of the StylEx model in the PyTorch, run the following notebook:
+To train our implementation of the StylEx model in the PyTorch, run the ```StylEx.ipynb``` (inside train folder) notebook:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/irenepap2/FACT_UvA_2022/blob/main/train/StylEx.ipynb)
 
@@ -30,7 +30,7 @@ To save time we provide our pre-trained models and ```.py``` files needed in a `
 
 ## Results
 
-To **reproduce the results shown in our paper**, run the following notebook:
+To **reproduce the results shown in our paper**, run the ```Att_Find.ipynb``` notebook:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/irenepap2/FACT_UvA_2022/blob/main/Attr_Find.ipynb)
 
