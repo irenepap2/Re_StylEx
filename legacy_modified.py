@@ -62,7 +62,7 @@ def load_torch_generator(pkl_file_path='./models/generator/generator_kwargs.pkl'
 
 #----------------------------------------------------------------------------
 
-def convert_discriminator_tfpkl_to_pytorch(source_path='saved_d_dictionary.pkl', dest_path='./models/discriminator/discriminator.pth'):
+def convert_discriminator_tfpkl_to_pytorch(source_path='./models/discriminator/saved_d_dictionary.pkl', dest_path='./models/discriminator/discriminator.pth'):
 
     print(f'Loading "{source_path}"...')
     with open(source_path, 'rb') as f:
@@ -164,7 +164,7 @@ def convert_tf_discriminator(tf_D):
     )
     return D
 
-def convert_encoder_tfpkl_to_pytorch(source_path='saved_e_dictionary.pkl', dest_path='./models/encoder/encoder.pth'):
+def convert_encoder_tfpkl_to_pytorch(source_path='./models/encoder/saved_e_dictionary.pkl', dest_path='./models/encoder/encoder.pth'):
 
     print(f'Loading "{source_path}"...')
     with open(source_path, 'rb') as f:
@@ -266,7 +266,7 @@ def convert_tf_encoder(tf_E):
 
 #----------------------------------------------------------------------------
 
-def convert_generator_tfpkl_to_pytorch(source_path='saved_g_dictionary.pkl', dest_path='./generator.pth'):
+def convert_generator_tfpkl_to_pytorch(source_path='./models/generator/saved_g_dictionary.pkl', dest_path='./models/generator/generator.pth'):
 
     print(f'Loading "{source_path}"...')
     with open(source_path, 'rb') as f:
@@ -416,11 +416,11 @@ def convert_tf_generator(tf_G):
 #----------------------------------------------------------------------------
 
 @click.command()
-@click.option('--source_generator', help='Input pickle', default='saved_g_dictionary.pkl', required=True, metavar='PATH')
+@click.option('--source_generator', help='Input pickle', default='./models/generator/saved_g_dictionary.pkl', required=True, metavar='PATH')
 @click.option('--dest_generator', help='Output pickle', default='./models/generator/generator.pth', required=True, metavar='PATH')
-@click.option('--source_encoder', help='Input pickle', default='saved_e_dictionary.pkl', required=True, metavar='PATH')
+@click.option('--source_encoder', help='Input pickle', default='./models/encoder/saved_e_dictionary.pkl', required=True, metavar='PATH')
 @click.option('--dest_encoder', help='Output pickle', default='./models/encoder/encoder.pth', required=True, metavar='PATH')
-@click.option('--source_discriminator', help='Input pickle', default='saved_d_dictionary.pkl', required=True, metavar='PATH')
+@click.option('--source_discriminator', help='Input pickle', default='./models/discriminator/saved_d_dictionary.pkl', required=True, metavar='PATH')
 @click.option('--dest_discriminator', help='Output pickle', default='./models/discriminator/discriminator.pth', required=True, metavar='PATH')
 @click.option('--force-fp16', help='Force the networks to use FP16', type=bool, default=False, metavar='BOOL', show_default=True)
 def convert_network_pickle(source_generator, dest_generator,
